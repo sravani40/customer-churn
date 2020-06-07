@@ -1,0 +1,262 @@
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import sklearn as sk
+d=pd.read_csv("F://CustomerChurn.csv")
+
+d.drop(['customerID'],axis=1,inplace=True)
+
+for i in d.columns:
+    print(i,d[i].unique(),d[i].dtype)
+    
+ gender ['Female' 'Male'] object
+SeniorCitizen [0 1] int64
+Partner ['Yes' 'No'] object
+Dependents ['No' 'Yes'] object
+tenure [ 1 34  2 45  8 22 10 28 62 13 16 58 49 25 69 52 71 21 12 30 47 72 17 27
+  5 46 11 70 63 43 15 60 18 66  9  3 31 50 64 56  7 42 35 48 29 65 38 68
+ 32 55 37 36 41  6  4 33 67 23 57 61 14 20 53 40 59 24 44 19 54 51 26  0
+ 39] int64
+PhoneService ['No' 'Yes'] object
+MultipleLines ['No phone service' 'No' 'Yes'] object
+InternetService ['DSL' 'Fiber optic' 'No'] object
+OnlineSecurity ['No' 'Yes' 'No internet service'] object
+OnlineBackup ['Yes' 'No' 'No internet service'] object
+DeviceProtection ['No' 'Yes' 'No internet service'] object
+TechSupport ['No' 'Yes' 'No internet service'] object
+StreamingTV ['No' 'Yes' 'No internet service'] object
+StreamingMovies ['No' 'Yes' 'No internet service'] object
+Contract ['Month-to-month' 'One year' 'Two year'] object
+PaperlessBilling ['Yes' 'No'] object
+PaymentMethod ['Electronic check' 'Mailed check' 'Bank transfer (automatic)'
+ 'Credit card (automatic)'] object
+MonthlyCharges [29.85 56.95 53.85 ... 63.1  44.2  78.7 ] float64
+TotalCharges [  29.85 1889.5   108.15 ...  346.45  306.6  6844.5 ] float64
+Churn ['No' 'Yes'] object
+
+d['TotalCharges']= pd.to_numeric(d.loc[:,'TotalCharges'], errors='coerce')
+
+d.drop([488, 753, 936, 1082, 1340, 3331, 3826, 4380, 5218, 6670, 6754],axis=0,inplace=True)
+
+data1=d['tenure']
+
+Q1 = data1.quantile(0.25)
+Q3 = data1.quantile(0.75)
+IQR = Q3 - Q1
+print(IQR)
+x= d[~((data1 < (Q1 - 1.5 * IQR)) |(data1 > (Q3 + 1.5 * IQR)))]
+x.drop(['Churn'],axis=1,inplace=True)
+
+x=pd.get_dummies(data=x,columns=['gender', 'Partner', 'Dependents','PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity',
+'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV','StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod'])
+
+y=d.Churn
+
+from sklearn import preprocessing   
+# label_encoder object knows how to understand word labels. 
+label_encoder = preprocessing.LabelEncoder() 
+label_encoder.fit(y)
+y=label_encoder.transform(y)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(x, y,test_size=0.33, random_state=42)
+
+from sklearn.ensemble import AdaBoostClassifier
+clf = AdaBoostClassifier(n_estimators=100, random_state=0)
+
+clf.fit(X_train,y_train)
+
+yp=clf.predict(X_test)
+
+from sklearn.metrics import classification_report, confusion_matrix 
+print(classification_report(yp,y_test ))
+confusion_matrix(yp,y_test)
+
+ precision    recall  f1-score   support
+
+           0       0.90      0.84      0.87      1822
+           1       0.54      0.66      0.59       499
+
+    accuracy                           0.80      2321
+   macro avg       0.72      0.75      0.73      2321
+weighted avg       0.82      0.80      0.81      2321
+
+
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler(feature_range=(0, 1))
+
+x_train_scaled = scaler.fit_transform(X_train)
+#x_train = pd.DataFrame(X_train_scaled)
+
+x_test_scaled = scaler.fit_transform(X_test)
+#x_test = pd.DataFrame(x_test_scaled)
+
+from sklearn import neighbors
+from sklearn.metrics import mean_squared_error 
+from sklearn.metrics import accuracy_score
+from math import sqrt
+import matplotlib.pyplot as plt
+%matplotlib inline
+rmse_val = []
+for K in range(0,50,1):
+    K = K+1
+    model = neighbors.KNeighborsClassifier(n_neighbors = K,algorithm='kd_tree',leaf_size=50)
+
+    model.fit(x_train_scaled, y_train)  #fit the model
+    pred=model.predict(x_test_scaled) #make prediction on test set
+    error =(accuracy_score(y_test,pred)) #calculate rmse
+    rmse_val.append(error) #store rmse values
+    print('RMSE value for k= ' , K , 'is:', error)
+    
+RMSE value for k=  1 is: 0.7264110297285653
+RMSE value for k=  2 is: 0.7570012925463162
+RMSE value for k=  3 is: 0.7453683757001293
+RMSE value for k=  4 is: 0.7570012925463162
+RMSE value for k=  5 is: 0.7544161999138302
+RMSE value for k=  6 is: 0.7626023265833692
+RMSE value for k=  7 is: 0.7634640241275312
+RMSE value for k=  8 is: 0.7673416630762603
+RMSE value for k=  9 is: 0.7664799655320982
+RMSE value for k=  10 is: 0.7656182679879362
+RMSE value for k=  11 is: 0.7643257216716932
+RMSE value for k=  12 is: 0.7677725118483413
+RMSE value for k=  13 is: 0.7643257216716932
+RMSE value for k=  14 is: 0.7733735458853942
+RMSE value for k=  15 is: 0.7673416630762603
+RMSE value for k=  16 is: 0.7755277897457993
+RMSE value for k=  17 is: 0.7763894872899613
+RMSE value for k=  18 is: 0.7733735458853942
+RMSE value for k=  19 is: 0.7742352434295562
+RMSE value for k=  20 is: 0.7776820336062042
+RMSE value for k=  21 is: 0.7772511848341233
+RMSE value for k=  22 is: 0.7768203360620423
+RMSE value for k=  23 is: 0.7806979750107712
+RMSE value for k=  24 is: 0.7768203360620423
+RMSE value for k=  25 is: 0.7862990090478242
+RMSE value for k=  26 is: 0.7858681602757432
+RMSE value for k=  27 is: 0.7875915553640672
+RMSE value for k=  28 is: 0.7914691943127962
+RMSE value for k=  29 is: 0.7897457992244722
+RMSE value for k=  30 is: 0.7888841016803102
+RMSE value for k=  31 is: 0.7884532529082292
+RMSE value for k=  32 is: 0.7923308918569582
+RMSE value for k=  33 is: 0.7854373115036622
+RMSE value for k=  34 is: 0.7910383455407152
+RMSE value for k=  35 is: 0.7875915553640672
+RMSE value for k=  36 is: 0.7927617406290393
+RMSE value for k=  37 is: 0.7884532529082292
+RMSE value for k=  38 is: 0.7910383455407152
+RMSE value for k=  39 is: 0.7871607065919862
+RMSE value for k=  40 is: 0.7906074967686342
+RMSE value for k=  41 is: 0.7884532529082292
+RMSE value for k=  42 is: 0.7919000430848772
+RMSE value for k=  43 is: 0.7888841016803102
+RMSE value for k=  44 is: 0.7931925894011203
+RMSE value for k=  45 is: 0.7897457992244722
+RMSE value for k=  46 is: 0.7906074967686342
+RMSE value for k=  47 is: 0.7875915553640672
+RMSE value for k=  48 is: 0.7880224041361482
+RMSE value for k=  49 is: 0.7871607065919862
+RMSE value for k=  50 is: 0.7893149504523912
+
+model1 = neighbors.KNeighborsClassifier(n_neighbors = 44)
+model1.fit(x_train_scaled,y_train)
+pre=model1.predict(x_test_scaled)
+print(classification_report(pre,y_test ))
+confusion_matrix(pre,y_test)
+
+precision    recall  f1-score   support
+
+           0       0.86      0.86      0.86      1723
+           1       0.60      0.61      0.60       598
+
+    accuracy                           0.79      2321
+   macro avg       0.73      0.73      0.73      2321
+weighted avg       0.79      0.79      0.79      2321
+
+k_range = list(range(1, 31))
+param_grid = dict(n_neighbors=k_range,weights=['uniform','distance'],leaf_size=range(40,100,10))
+from sklearn.model_selection import GridSearchCV
+knn= neighbors.KNeighborsClassifier()
+grid = GridSearchCV(knn, param_grid, cv=10, scoring='accuracy')
+grid.fit(x_train_scaled,y_train)
+pred=grid.predict(x_test_scaled)
+print(classification_report(pred,y_test ))
+confusion_matrix(pred,y_test)
+
+precision    recall  f1-score   support
+
+           0       0.87      0.85      0.86      1752
+           1       0.56      0.60      0.58       569
+
+    accuracy                           0.79      2321
+   macro avg       0.71      0.72      0.72      2321
+weighted avg       0.79      0.79      0.79      2321
+
+from sklearn.svm import SVC
+classifier=SVC(kernel='rbf', random_state=0,C=0.92)
+classifier.fit(x_train_scaled,y_train)
+Y_pred=classifier.predict(x_test_scaled)
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+cm_rbf=confusion_matrix(y_test,Y_pred)
+print(cm_rbf)
+accuracy_score(y_test,Y_pred)
+
+[[1553  158]
+ [ 309  301]]
+0.7987936234381732
+
+classifier=SVC(kernel='linear', random_state=0,C=0.08)
+classifier.fit(x_train_scaled,y_train)
+Y_pred=classifier.predict(x_test_scaled)
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+cm_rbf=confusion_matrix(y_test,Y_pred)
+print(cm_rbf)
+accuracy_score(y_test,Y_pred)
+
+[[1523  188]
+ [ 278  332]]
+0.7992244722102542
+
+from sklearn.linear_model import LogisticRegression
+model=LogisticRegression(random_state=0,C=0.6,penalty='l2',class_weight='uniform')
+model.fit(x_train_scaled,y_train)
+pred=model.predict(x_test_scaled)
+cm_rbf=confusion_matrix(y_test,pred)
+print(cm_rbf)
+accuracy_score(y_test,pred)
+
+[[1531  180]
+ [ 283  327]]
+0.8005170185264971
+
+grid=GridSearchCV(cv=5,
+             estimator=LogisticRegression( intercept_scaling=1,   
+               dual=False, fit_intercept=True,  tol=0.0001),
+             param_grid={'C': [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],'penalty':['l2','l1']})
+grid.fit(x_train_scaled,y_train)
+pred=grid.predict(x_test_scaled)
+cm_rbf=confusion_matrix(y_test,pred)
+print(cm_rbf)
+accuracy_score(y_test,pred)
+
+grid.best_params_
+{'C': 0.8, 'penalty': 'l2'}
+
+import xgboost as xgb
+model= xgb.XGBClassifier(n_estimators=100,learning_rate=0.1)
+model.fit(x_train_scaled,y_train)
+pred=model.predict(x_test_scaled)
+cm_rbf=confusion_matrix(y_test,pred)
+print(cm_rbf)
+accuracy_score(y_test,pred)
+
+[[1561  150]
+ [ 293  317]]
+0.8091339939681171
+
+
+    
+ 
